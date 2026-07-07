@@ -81,6 +81,33 @@ def stat_card(label, value, delta=None, delta_good_if_up=True):
     )
 
 
+def weather_emoji(desc):
+    d = (desc or "").lower()
+    if 'thunder' in d:
+        return '⛈️'
+    if 'shower' in d or 'rain' in d:
+        return '🌧️'
+    if 'drizzle' in d:
+        return '🌦️'
+    if 'fog' in d:
+        return '🌫️'
+    if 'overcast' in d:
+        return '☁️'
+    if 'partly' in d:
+        return '⛅'
+    if 'mainly' in d:
+        return '🌤️'
+    if 'clear' in d:
+        return '☀️'
+    return '🌡️'
+
+
+def hex_to_rgba(hex_color, alpha=0.12):
+    hex_color = hex_color.lstrip('#')
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    return f'rgba({r},{g},{b},{alpha})'
+
+
 @st.cache_data(ttl=3600)
 def get_data():
     db_url = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
@@ -150,30 +177,66 @@ with tab_ringkasan:
         stat_card("💨 Kecepatan Angin", f"{angin:.1f} km/h")
 
     st.divider()
-    st.subheader("Tren Suhu 7 Hari")
+    st.subheader("Tren Cuaca per Jam")
 
     col_left, col_right = st.columns([2, 1])
 
     with col_left:
-        fig_temp = go.Figure()
-        fig_temp.add_trace(go.Scatter(
-            x=df_daily_kota['time'], y=df_daily_kota['temperature_2m_max'],
-            name='Suhu Maks', line=dict(color='#e34948', width=2), mode='lines+markers',
-            marker=dict(size=8, line=dict(width=2, color='#fcfcfb'))
-        ))
-        fig_temp.add_trace(go.Scatter(
-            x=df_daily_kota['time'], y=df_daily_kota['temperature_2m_min'],
-            name='Suhu Min', line=dict(color='#2a78d6', width=2), mode='lines+markers',
-            marker=dict(size=8, line=dict(width=2, color='#fcfcfb')),
-            fill='tonexty', fillcolor='rgba(42,120,214,0.08)'
-        ))
-        fig_temp.update_layout(
-            title='Suhu Maks & Min Harian (°C)',
-            xaxis_title=None, yaxis_title='°C',
-            height=380, margin=dict(t=90, b=10),
-            legend=dict(orientation='h', yanchor='top', y=1.12, x=0)
+        METRIC_OPTIONS = {
+            '🌡️ Suhu':        ('temperature_2m', '°C', '#e34948'),
+            '🌧️ Curah Hujan': ('precipitation', 'mm', '#2a78d6'),
+            '💨 Angin':        ('wind_speed_10m', 'km/h', '#4a3aa7'),
+        }
+        metric_label = st.radio(
+            "Metrik", list(METRIC_OPTIONS.keys()), horizontal=True,
+            label_visibility='collapsed', key=f"metric_{kota_terpilih}"
         )
-        st.plotly_chart(fig_temp, use_container_width=True)
+        metric_col, metric_unit, metric_color = METRIC_OPTIONS[metric_label]
+
+        hari_list = sorted(df_daily_kota['time'].dt.date.unique())
+        state_key = f"hari_pilih_{kota_terpilih}"
+        if st.session_state.get(state_key) not in hari_list:
+            st.session_state[state_key] = hari_list[0]
+
+        hari_display = []
+        for tgl in hari_list:
+            row = df_daily_kota[df_daily_kota['time'].dt.date == tgl].iloc[0]
+            day_hourly = df_hourly_kota[df_hourly_kota['time'].dt.date == tgl]
+            dominant = day_hourly['weather_description'].mode()
+            emoji = weather_emoji(dominant.iloc[0] if len(dominant) else '')
+            label = f"{tgl.strftime('%a %d/%m')}  {emoji} {row['temperature_2m_max']:.0f}°/{row['temperature_2m_min']:.0f}°"
+            hari_display.append(label)
+
+        idx_default = hari_list.index(st.session_state[state_key])
+        pilihan = st.radio(
+            "Hari", hari_display, index=idx_default, horizontal=True,
+            label_visibility='collapsed', key=f"hariradio_{kota_terpilih}"
+        )
+        selected_day = hari_list[hari_display.index(pilihan)]
+        st.session_state[state_key] = selected_day
+
+        day_data = df_hourly_kota[
+            df_hourly_kota['time'].dt.date == selected_day
+        ].sort_values('time')
+
+        y_min, y_max = day_data[metric_col].min(), day_data[metric_col].max()
+        pad = max((y_max - y_min) * 0.25, 1)
+
+        fig_hourly = go.Figure()
+        fig_hourly.add_trace(go.Scatter(
+            x=day_data['time'], y=day_data[metric_col],
+            mode='lines+markers',
+            line=dict(color=metric_color, width=2),
+            marker=dict(size=6, line=dict(width=2, color='#fcfcfb')),
+            fill='tozeroy', fillcolor=hex_to_rgba(metric_color, 0.14)
+        ))
+        fig_hourly.update_layout(
+            title=f"{metric_label} — {selected_day.strftime('%A, %d %b %Y')}",
+            height=340, margin=dict(t=60, b=10),
+            yaxis=dict(title=metric_unit, range=[y_min - pad, y_max + pad]),
+            xaxis=dict(title=None, dtick=3 * 60 * 60 * 1000, tickformat='%H.%M')
+        )
+        st.plotly_chart(fig_hourly, use_container_width=True)
 
     with col_right:
         weather_count = (
