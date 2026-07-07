@@ -65,17 +65,22 @@ def load_data(df, table_name, schema, if_exists='replace'):
         engine.dispose()
 
 
-def extract_api(url, retries=3, backoff=5):
+_session = requests.Session()
+_session.headers.update({"User-Agent": "nusantara-weather-insight-etl/1.0"})
+
+
+def extract_api(url, retries=5, backoff=10):
     last_err = None
     for attempt in range(1, retries + 1):
         try:
-            response = requests.get(url, timeout=30)
+            response = _session.get(url, timeout=60)
             response.raise_for_status()
             return response.json()
         except (requests.exceptions.RequestException,) as e:
             last_err = e
-            log(f"  Percobaan {attempt}/{retries} gagal ({e}), retry dalam {backoff}s...")
-            time.sleep(backoff)
+            wait = backoff * attempt
+            log(f"  Percobaan {attempt}/{retries} gagal ({e}), retry dalam {wait}s...")
+            time.sleep(wait)
     raise last_err
 
 
@@ -157,7 +162,7 @@ def run():
         all_daily.append(df_daily_city)
 
         log(f"[{i}/{len(CITIES)}] {city} - extracted")
-        time.sleep(0.3)
+        time.sleep(2)
 
     df = pd.concat(all_hourly, ignore_index=True)
     df_daily = pd.concat(all_daily, ignore_index=True)
