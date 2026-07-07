@@ -1,4 +1,6 @@
 .streamlit/secrets.toml
+etl_config.py
+etl_log.txt
 .ipynb_checkpoints/
 __pycache__/
 *.pyc
