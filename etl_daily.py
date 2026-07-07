@@ -65,10 +65,18 @@ def load_data(df, table_name, schema, if_exists='replace'):
         engine.dispose()
 
 
-def extract_api(url):
-    response = requests.get(url, timeout=30)
-    response.raise_for_status()
-    return response.json()
+def extract_api(url, retries=3, backoff=5):
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except (requests.exceptions.RequestException,) as e:
+            last_err = e
+            log(f"  Percobaan {attempt}/{retries} gagal ({e}), retry dalam {backoff}s...")
+            time.sleep(backoff)
+    raise last_err
 
 
 CITIES = {
