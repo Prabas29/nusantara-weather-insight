@@ -4,6 +4,8 @@ Pipeline ETL (Extract, Transform, Load) dan dashboard cuaca untuk 38 provinsi di
 
 Awalnya dibuat sebagai bagian dari Bootcamp Data Analyst (Day 25 - ETL), lalu dikembangkan menjadi pipeline harian otomatis + dashboard interaktif.
 
+**Tech stack:** Python · pandas · SQLAlchemy · PostgreSQL (Neon) · Streamlit · Plotly · GitHub Actions
+
 ## Komponen
 
 | File/Folder | Keterangan |
