@@ -62,6 +62,21 @@ Semua file kredensial asli (`.env`, `etl_config.py`, `.streamlit/secrets.toml`) 
    streamlit run dashboard.py
    ```
 
+   ## Key Insights
+
+*(isi setelah kamu cek dashboard — lihat catatan di bawah)*
+
+- Provinsi dengan curah hujan tertinggi/terendah dalam periode pengamatan
+- Provinsi dengan variasi suhu harian paling ekstrem
+- Pola umum: apakah wilayah barat Indonesia cenderung lebih basah dari timur, dsb
+
+## Recommendation
+
+- Insight ini bisa jadi dasar untuk [use case spesifik, misal: perencanaan distribusi 
+  logistik, jadwal tanam pertanian, dsb — sesuaikan dengan temuan aktual]
+- Pipeline ini bisa dikembangkan lebih lanjut dengan menambahkan alert otomatis 
+  ketika curah hujan di suatu provinsi melewati threshold tertentu
+
 ## Catatan
 
 - Data mencakup 38 ibu kota provinsi se-Indonesia (lihat dict `CITIES` di `etl_daily.py`).
