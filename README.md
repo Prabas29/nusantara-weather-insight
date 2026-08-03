@@ -62,9 +62,7 @@ Semua file kredensial asli (`.env`, `etl_config.py`, `.streamlit/secrets.toml`) 
    streamlit run dashboard.py
    ```
 
-   ## Key Insights
-
-*(isi setelah kamu cek dashboard — lihat catatan di bawah)*
+## Key 
 
 - Provinsi dengan curah hujan tertinggi/terendah dalam periode pengamatan
 - Provinsi dengan variasi suhu harian paling ekstrem
